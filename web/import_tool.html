@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import członków PTR</title>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --text: #1f2933;
+            --muted: #52606d;
+            --border: #d9e2ec;
+            --accent: #1d4ed8;
+            --accent-bg: #eef2ff;
+            --ok: #047857;
+            --ok-bg: #ecfdf5;
+            --warn: #b45309;
+            --warn-bg: #fffbeb;
+            --error: #b91c1c;
+            --error-bg: #fef2f2;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 2rem 1rem 3rem;
+        }
+
+        h1 {
+            margin: 0 0 0.25rem;
+            font-size: 1.8rem;
+        }
+
+        h2 {
+            margin: 0 0 0.75rem;
+            font-size: 1.15rem;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .card {
+            margin-top: 1.25rem;
+            padding: 1.25rem 1.5rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .step {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.6rem;
+            height: 1.6rem;
+            margin-right: 0.5rem;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .note {
+            margin: 0 0 1rem;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .drop {
+            display: block;
+            padding: 1.5rem;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .drop:hover,
+        .drop.is-over {
+            border-color: var(--accent);
+            background: var(--accent-bg);
+        }
+
+        .drop strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+        }
+
+        .drop input {
+            display: none;
+        }
+
+        label.field {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        label.field input {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            padding: 0.55rem 0.7rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+            color: var(--text);
+        }
+
+        .check {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--muted);
+        }
+
+        details summary {
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        details[open] summary {
+            margin-bottom: 0.75rem;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+        }
+
+        button {
+            padding: 0.7rem 1.3rem;
+            border: 0;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: var(--accent-bg);
+            color: var(--accent);
+        }
+
+        button.save {
+            background: var(--ok);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .message[hidden] {
+            display: none;
+        }
+
+        .message--info { background: var(--accent-bg); color: var(--accent); }
+        .message--ok { background: var(--ok-bg); color: var(--ok); }
+        .message--warn { background: var(--warn-bg); color: var(--warn); }
+        .message--error { background: var(--error-bg); color: var(--error); }
+
+        .message button {
+            margin-top: 0.5rem;
+            padding: 0.4rem 0.9rem;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            padding: 0.45rem 0.4rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .tag--insert { background: var(--accent-bg); color: var(--accent); }
+        .tag--update { background: var(--warn-bg); color: var(--warn); }
+        .tag--unchanged { background: #f1f5f9; color: var(--muted); }
+        .tag--error,
+        .tag--skipped { background: var(--error-bg); color: var(--error); }
+
+        .change {
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Import członków PTR</h1>
+        <p class="subtitle">Aktualizacja bazy legitymacji z pliku Excel (.xlsm)</p>
+
+        <section class="card">
+            <h2><span class="step">1</span>Wybierz plik</h2>
+            <p class="note">
+                Plik jest czytany tylko na tym komputerze. Do serwera trafiają wyłącznie: numer legitymacji,
+                klasa, stanowisko w PTR, data ważności (ostatnia składka + 365 dni) i UID karty.
+                Imiona, nazwiska, adresy, telefony, e-maile i uwagi <strong>nie są wysyłane</strong>.
+            </p>
+            <label class="drop" id="drop">
+                <strong id="drop-title">Kliknij, aby wybrać plik</strong>
+                <span id="drop-hint">albo przeciągnij go tutaj</span>
+                <input type="file" id="file" accept=".xlsm,.xlsx">
+            </label>
+        </section>
+
+        <section class="card">
+            <h2><span class="step">2</span>Hasło</h2>
+            <label class="field">Hasło do importu
+                <input type="password" id="api_key" autocomplete="off">
+            </label>
+            <label class="check"><input type="checkbox" id="remember"> Zapamiętaj hasło na tym komputerze</label>
+            <details>
+                <summary>Ustawienia zaawansowane</summary>
+                <label class="field">Adres serwera
+                    <input type="url" id="api_url">
+                </label>
+            </details>
+        </section>
+
+        <section class="card">
+            <h2><span class="step">3</span>Sprawdź i zapisz</h2>
+            <p class="note">„Sprawdź” niczego nie zmienia — pokazuje tylko, co zostanie zapisane.</p>
+            <div class="buttons">
+                <button type="button" id="check" disabled>Sprawdź</button>
+                <button type="button" id="save" class="save" disabled>Zapisz w bazie</button>
+            </div>
+            <div class="message" id="message" hidden></div>
+        </section>
+
+        <section class="card" id="result" hidden>
+            <h2 id="result-title">Dane do wysłania</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Wiersz</th>
+                            <th>Nr legitymacji</th>
+                            <th>Klasa</th>
+                            <th>Stanowisko</th>
+                            <th>Ważna do</th>
+                            <th>UID karty</th>
+                            <th>Wynik</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        var DEFAULT_API_URL = 'https://ptr-validator.free.nf/import_api.php';
+        var STORAGE_KEY = 'ptr-import-tool';
+        var SHEET_NAME = 'dane czlonkow';
+        var MEMBERSHIP_DAYS = 365;
+        // Normalized header -> field. Nothing else is read from the sheet.
+        var COLUMNS = {
+            nrlegitymacji: 'member_id',
+            klasa: 'license_level',
+            stanowiskowptr: 'membership_type',
+            ostatniaskladka: 'last_fee'
+        };
+        // Optional column: card UID. Empty cell = keep the UID stored in the database.
+        var UID_HEADERS = ['uid', 'uuid', 'uidkarty', 'uuidkarty', 'carduid', 'numeruid', 'uidlegitymacji', 'nrkarty'];
+
+        var ACTIONS = {
+            insert: 'nowy',
+            update: 'zmiana',
+            unchanged: 'bez zmian',
+            error: 'błąd',
+            skipped: 'pominięty'
+        };
+        var FIELD_NAMES = {
+            license_level: 'Klasa',
+            membership_type: 'Stanowisko',
+            membership_expiration_date: 'Ważna do',
+            card_uid: 'UID karty'
+        };
+        var ROW_ERRORS = {
+            'invalid member number': 'nieprawidłowy numer legitymacji',
+            'invalid expiration date': 'nieprawidłowa data',
+            'unreadable last fee date': 'nieczytelna data ostatniej składki',
+            'invalid card uid': 'nieprawidłowy UID karty (wymagane 14 znaków 0-9, A-F)'
+        };
+
+        function rowErrorText(error, detail) {
+            if (error === 'card uid in use') {
+                return 'ten UID karty ma już członek nr ' + (detail && detail.member_id);
+            }
+            if (error === 'duplicate card uid') {
+                return 'ten sam UID karty jest też w wierszu ' + (detail && detail.row);
+            }
+            if (/^duplicate member number/.test(error)) {
+                return 'numer legitymacji powtarza się w pliku';
+            }
+            return ROW_ERRORS[error] || error;
+        }
+
+        var el = function (id) { return document.getElementById(id); };
+        var fileInput = el('file');
+        var keyInput = el('api_key');
+        var urlInput = el('api_url');
+        var rememberBox = el('remember');
+        var checkButton = el('check');
+        var saveButton = el('save');
+        var messageBox = el('message');
+        var rowsBody = el('rows');
+
+        var parsedRows = [];
+        var skippedRows = [];
+        var hasUidColumn = false;
+        var checked = false;
+
+        // ---- settings ----
+
+        function loadSettings() {
+            var saved = {};
+            try {
+                saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
+            } catch (e) {}
+            urlInput.value = saved.api_url || DEFAULT_API_URL;
+            if (saved.api_key) {
+                keyInput.value = saved.api_key;
+                rememberBox.checked = true;
+            }
+        }
+
+        function saveSettings() {
+            try {
+                var data = { api_url: urlInput.value.trim() };
+                if (rememberBox.checked) {
+                    data.api_key = keyInput.value;
+                }
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        // ---- UI helpers ----
+
+        function showMessage(text, kind, action) {
+            messageBox.hidden = !text;
+            messageBox.className = 'message message--' + (kind || 'info');
+            messageBox.textContent = text || '';
+            if (action) {
+                var br = document.createElement('br');
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'secondary';
+                button.textContent = action.label;
+                button.addEventListener('click', action.run);
+                messageBox.appendChild(br);
+                messageBox.appendChild(button);
+            }
+        }
+
+        function updateButtons(busy) {
+            var ready = parsedRows.length > 0 && keyInput.value !== '';
+            checkButton.disabled = busy || !ready;
+            saveButton.disabled = busy || !ready || !checked;
+        }
+
+        function resetCheck() {
+            checked = false;
+            updateButtons(false);
+        }
+
+        // ---- workbook parsing ----
+
+        function normalize(text) {
+            return String(text == null ? '' : text)
+                .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+        }
+
+        function headerKey(text) {
+            return normalize(text).replace(/ /g, '');
+        }
+
+        // Excel serial number or "dd.mm.yyyy" / "yyyy-mm-dd" text -> UTC Date.
+        function parseDate(value) {
+            if (value == null || value === '') {
+                return null;
+            }
+            if (typeof value === 'number') {
+                return new Date(Math.round((value - 25569) * 86400000));
+            }
+            var text = String(value).trim();
+            var m = text.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+            if (m) {
+                return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+            }
+            m = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) {
+                return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+            }
+            return undefined;
+        }
+
+        function cellText(value) {
+            if (value == null) {
+                return null;
+            }
+            var text = String(value).trim();
+            return text === '' ? null : text;
+        }
+
+        // "04:aa:bb cc-dd..." -> "04AABBCCDD..."; the server validates the result.
+        function normalizeUid(value) {
+            var text = cellText(value);
+            return text === null ? null : text.replace(/[\s:-]/g, '').toUpperCase();
+        }
+
+        function findSheet(workbook) {
+            var name = workbook.SheetNames.filter(function (n) {
+                return normalize(n) === SHEET_NAME;
+            })[0];
+            if (name) {
+                return workbook.Sheets[name];
+            }
+            for (var i = 0; i < workbook.SheetNames.length; i++) {
+                var sheet = workbook.Sheets[workbook.SheetNames[i]];
+                var header = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null })[0] || [];
+                if (header.some(function (h) { return headerKey(h) === 'nrlegitymacji'; })) {
+                    return sheet;
+                }
+            }
+            return null;
+        }
+
+        function parseWorkbook(buffer) {
+            var workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+            var sheet = findSheet(workbook);
+            if (!sheet) {
+                throw new Error('W pliku nie ma arkusza „Dane Członków”.');
+            }
+
+            var table = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null, blankrows: true });
+            var columnIndex = {};
+            (table[0] || []).forEach(function (title, index) {
+                var key = headerKey(title);
+                var field = UID_HEADERS.indexOf(key) !== -1 ? 'card_uid' : COLUMNS[key];
+                if (field && !(field in columnIndex)) {
+                    columnIndex[field] = index;
+                }
+            });
+            var uidColumn = 'card_uid' in columnIndex;
+
+            var missing = Object.keys(COLUMNS).filter(function (k) {
+                return !(COLUMNS[k] in columnIndex);
+            });
+            if (missing.length) {
+                throw new Error('W arkuszu brakuje kolumn: Nr. Legitymacji, Klasa, Stanowisko w PTR, Ostatnia składka.');
+            }
+
+            var rows = [];
+            var skipped = [];
+            for (var r = 1; r < table.length; r++) {
+                var line = table[r] || [];
+                var rawId = line[columnIndex.member_id];
+                var memberId = typeof rawId === 'number' ? String(Math.round(rawId)) : cellText(rawId);
+                if (memberId === null) {
+                    continue;
+                }
+
+                var lastFee = parseDate(line[columnIndex.last_fee]);
+                if (lastFee === undefined) {
+                    skipped.push({ sheet_row: r + 1, member_id: memberId, error: 'unreadable last fee date' });
+                    continue;
+                }
+
+                // Only database fields go into this object.
+                rows.push({
+                    sheet_row: r + 1,
+                    member_id: memberId,
+                    license_level: cellText(line[columnIndex.license_level]),
+                    membership_type: cellText(line[columnIndex.membership_type]),
+                    membership_expiration_date: lastFee === null ? null
+                        : new Date(lastFee.getTime() + MEMBERSHIP_DAYS * 86400000).toISOString().slice(0, 10),
+                    card_uid: uidColumn ? normalizeUid(line[columnIndex.card_uid]) : null
+                });
+            }
+
+            return { rows: rows, skipped: skipped, hasUid: uidColumn };
+        }
+
+        // ---- results table ----
+
+        function renderRows(serverRows) {
+            var byRow = {};
+            (serverRows || []).forEach(function (r) { byRow[r.sheet_row] = r; });
+
+            rowsBody.innerHTML = '';
+            parsedRows.concat(skippedRows).sort(function (a, b) {
+                return a.sheet_row - b.sheet_row;
+            }).forEach(function (row) {
+                var tr = document.createElement('tr');
+                [row.sheet_row, row.member_id, row.license_level, row.membership_type, row.membership_expiration_date, row.card_uid]
+                    .forEach(function (value) {
+                        var td = document.createElement('td');
+                        td.textContent = value == null ? '—' : value;
+                        tr.appendChild(td);
+                    });
+
+                var cell = document.createElement('td');
+                var server = byRow[row.sheet_row];
+                var action = row.error ? 'skipped' : (server ? server.action : null);
+                if (action) {
+                    var tag = document.createElement('span');
+                    tag.className = 'tag tag--' + action;
+                    tag.textContent = ACTIONS[action] || action;
+                    cell.appendChild(tag);
+                }
+                var error = row.error || (server && server.error);
+                if (error) {
+                    var span = document.createElement('span');
+                    span.className = 'change';
+                    span.textContent = rowErrorText(error, server && server.error_detail);
+                    cell.appendChild(span);
+                }
+                ((server && server.changes) || []).forEach(function (change) {
+                    var span = document.createElement('span');
+                    span.className = 'change';
+                    span.textContent = (FIELD_NAMES[change.field] || change.field) + ': ' +
+                        (change.from == null ? '—' : change.from) + ' → ' + (change.to == null ? '—' : change.to);
+                    cell.appendChild(span);
+                });
+                tr.appendChild(cell);
+                rowsBody.appendChild(tr);
+            });
+
+            el('result').hidden = false;
+        }
+
+        // ---- server ----
+
+        function siteUrl() {
+            try {
+                return new URL(urlInput.value.trim()).origin + '/';
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function blockedMessage() {
+            var site = siteUrl();
+            showMessage(
+                'Nie udało się połączyć z serwerem. Sprawdź internet. Jeśli działa: kliknij „Otwórz stronę”, ' +
+                'poczekaj aż się załaduje, zamknij ją i kliknij „Sprawdź” ponownie.',
+                'error',
+                site ? { label: 'Otwórz stronę', run: function () { window.open(site, '_blank'); } } : null
+            );
+        }
+
+        function serverErrorMessage(data) {
+            switch (data.error) {
+                case 'invalid_key':
+                    return 'Nieprawidłowe hasło.';
+                case 'locked':
+                    return 'Zbyt wiele błędnych haseł. Spróbuj ponownie za ' +
+                        Math.max(1, Math.ceil((data.retry_after || 900) / 60)) + ' min.';
+                case 'import_disabled':
+                    return 'Import jest wyłączony na serwerze (brak hasła w config.php).';
+                case 'too_large':
+                    return 'Plik ma zbyt wiele danych.';
+                default:
+                    return 'Błąd serwera. Nic nie zostało zapisane.';
+            }
+        }
+
+        function send(dryRun) {
+            saveSettings();
+            updateButtons(true);
+            showMessage(dryRun ? 'Sprawdzanie…' : 'Zapisywanie…', 'info');
+
+            fetch(urlInput.value.trim(), {
+                method: 'POST',
+                // text/plain keeps this a "simple" request (no CORS preflight).
+                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                credentials: 'include',
+                body: JSON.stringify({ api_key: keyInput.value, dry_run: dryRun, rows: parsedRows })
+            }).then(function (response) {
+                return response.text().then(function (text) {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        return null;
+                    }
+                });
+            }).then(function (data) {
+                if (data === null) {
+                    checked = false;
+                    updateButtons(false);
+                    blockedMessage();
+                    return;
+                }
+                if (data.error) {
+                    checked = false;
+                    updateButtons(false);
+                    showMessage(serverErrorMessage(data), 'error');
+                    return;
+                }
+
+                var s = data.summary;
+                var errors = s.error + skippedRows.length;
+                var text = 'Nowych: ' + s.insert + ', zmienionych: ' + s.update + ', bez zmian: ' + s.unchanged +
+                    (errors ? ', z błędami: ' + errors : '') + '.';
+
+                renderRows(data.rows);
+
+                if (dryRun) {
+                    el('result-title').textContent = 'Wynik sprawdzenia';
+                    checked = (s.insert + s.update) > 0;
+                    updateButtons(false);
+                    if (!checked) {
+                        showMessage(text + ' Nie ma nic do zapisania.', errors ? 'warn' : 'ok');
+                    } else {
+                        showMessage(text + ' Jeśli wszystko się zgadza, kliknij „Zapisz w bazie”.' +
+                            (errors ? ' Wiersze z błędami zostaną pominięte.' : ''), errors ? 'warn' : 'info');
+                    }
+                } else {
+                    el('result-title').textContent = 'Zapisano';
+                    checked = false;
+                    updateButtons(false);
+                    showMessage('Zapisano. ' + text, 'ok');
+                }
+            }).catch(function () {
+                checked = false;
+                updateButtons(false);
+                blockedMessage();
+            });
+        }
+
+        // ---- events ----
+
+        function readFile(file) {
+            parsedRows = [];
+            skippedRows = [];
+            resetCheck();
+            el('result').hidden = true;
+            if (!file) {
+                return;
+            }
+
+            el('drop-title').textContent = file.name;
+            el('drop-hint').textContent = 'kliknij, aby wybrać inny plik';
+            showMessage('Czytanie pliku…', 'info');
+
+            if (typeof XLSX === 'undefined') {
+                showMessage('Brak połączenia z internetem — nie można wczytać pliku.', 'error');
+                return;
+            }
+
+            file.arrayBuffer().then(function (buffer) {
+                var parsed = parseWorkbook(buffer);
+                parsedRows = parsed.rows;
+                skippedRows = parsed.skipped;
+                hasUidColumn = parsed.hasUid;
+                el('result-title').textContent = 'Dane do wysłania';
+                renderRows(null);
+                updateButtons(false);
+                var text = 'Wczytano ' + parsedRows.length + ' członków' +
+                    (skippedRows.length ? ', pominięto ' + skippedRows.length : '') + '. Nic nie zostało jeszcze wysłane.' +
+                    (hasUidColumn ? '' : ' Plik nie ma kolumny „UID karty” — karty w bazie nie zostaną zmienione.');
+                if (!keyInput.value) {
+                    text += ' Wpisz hasło, a potem kliknij „Sprawdź”.';
+                } else {
+                    text += ' Kliknij „Sprawdź”.';
+                }
+                showMessage(text, skippedRows.length ? 'warn' : 'info');
+            }).catch(function (error) {
+                showMessage('Nie można odczytać pliku: ' + error.message, 'error');
+            });
+        }
+
+        fileInput.addEventListener('change', function () {
+            readFile(fileInput.files[0]);
+        });
+
+        var drop = el('drop');
+        ['dragenter', 'dragover'].forEach(function (type) {
+            drop.addEventListener(type, function (event) {
+                event.preventDefault();
+                drop.classList.add('is-over');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (type) {
+            drop.addEventListener(type, function (event) {
+                event.preventDefault();
+                drop.classList.remove('is-over');
+            });
+        });
+        drop.addEventListener('drop', function (event) {
+            readFile(event.dataTransfer.files[0]);
+        });
+
+        keyInput.addEventListener('input', function () {
+            resetCheck();
+            if (rememberBox.checked) {
+                saveSettings();
+            }
+        });
+        urlInput.addEventListener('input', function () {
+            resetCheck();
+            saveSettings();
+        });
+        rememberBox.addEventListener('change', saveSettings);
+
+        checkButton.addEventListener('click', function () {
+            send(true);
+        });
+        saveButton.addEventListener('click', function () {
+            if (window.confirm('Zapisać te zmiany w bazie członków?')) {
+                send(false);
+            }
+        });
+
+        loadSettings();
+        updateButtons(false);
+    })();
+    </script>
+</body>
+</html>

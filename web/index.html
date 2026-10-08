@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTR Validator Test</title>
+    <link rel="stylesheet" href="assets/css/verify.css">
+    <style>
+        .test-form label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .test-form input {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            padding: 0.5rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+            font-family: Consolas, "Courier New", monospace;
+            color: var(--text);
+        }
+
+        .test-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .test-actions button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #eef2ff;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .test-actions button:hover {
+            background: #e0e7ff;
+        }
+
+        .test-url {
+            display: block;
+            margin-top: 1rem;
+            word-break: break-all;
+        }
+
+        .test-output {
+            margin: 0.75rem 0 0;
+            padding: 0.75rem;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 6px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            min-height: 3rem;
+        }
+
+        .test-known {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 0.75rem;
+        }
+
+        .test-summary {
+            margin: 0.75rem 0 0;
+            font-weight: 700;
+        }
+
+        .test-table-wrap {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .test-table th,
+        .test-table td {
+            padding: 0.5rem 0.4rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .test-table th {
+            color: var(--muted);
+        }
+
+        .test-table code {
+            display: block;
+            margin-top: 0.2rem;
+            color: var(--muted);
+            font-size: 0.8rem;
+            word-break: break-all;
+        }
+
+        .test-table td:last-child {
+            white-space: nowrap;
+        }
+
+        .test-table a {
+            margin-right: 0.4rem;
+        }
+
+        .test-pass {
+            color: var(--valid);
+            font-weight: 700;
+        }
+
+        .test-fail {
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        @media (max-width: 560px) {
+            .test-known {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="membership-verify">
+        <header class="membership-verify__header">
+            <h1>Validator Test</h1>
+            <p class="membership-verify__subtitle">Quick checks for verify.php and user_data.php</p>
+        </header>
+
+        <section class="membership-card">
+            <form class="test-form" id="test-form">
+                <label>member_id
+                    <input name="member_id" id="member_id" placeholder="e.g. 123 or 0000000123" autocomplete="off">
+                </label>
+                <label>unique_id <small>(legacy card link param)</small>
+                    <input name="unique_id" id="unique_id" placeholder="e.g. 0000000123" autocomplete="off">
+                </label>
+                <label>card_uid <small>(present = "verified" view)</small>
+                    <input name="card_uid" id="card_uid" placeholder="e.g. 04AABBCCDDEEFF" autocomplete="off">
+                </label>
+                <label>Extra params <small>(raw query string, optional)</small>
+                    <input name="extra" id="extra" placeholder="e.g. uid=04AABBCCDDEEFF&amp;ctr=000001&amp;cmac=0000000000000000" autocomplete="off">
+                </label>
+
+                <div class="test-actions">
+                    <button type="button" data-action="page">Open verify.php</button>
+                    <button type="button" data-action="json">Fetch user_data.php</button>
+                    <button type="button" data-action="clear">Clear</button>
+                </div>
+            </form>
+
+            <code class="membership-example test-url" id="test-url">verify.php</code>
+            <pre class="test-output" id="test-output">Response from user_data.php appears here.</pre>
+        </section>
+
+        <section class="membership-card">
+            <h2>Test cases</h2>
+            <p class="membership-card__note">Set a member number and card UID that exist in the database, then run the cases against user_data.php.</p>
+            <div class="test-form test-known">
+                <label>Known member number
+                    <input id="known_member" placeholder="123" autocomplete="off">
+                </label>
+                <label>Known card UID <small>(stored in members.card_uid)</small>
+                    <input id="known_card_uid" placeholder="04AABBCCDDEEFF" autocomplete="off">
+                </label>
+            </div>
+            <div class="test-actions">
+                <button type="button" id="run-all">Run all</button>
+            </div>
+            <p class="test-summary" id="test-summary"></p>
+            <div class="test-table-wrap">
+                <table class="test-table">
+                    <thead>
+                        <tr>
+                            <th>Case</th>
+                            <th>Expected</th>
+                            <th>Result</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="test-cases"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+
+        var formFields = ['member_id', 'unique_id', 'card_uid', 'extra'];
+        var fields = formFields.concat(['known_member', 'known_card_uid']);
+        var storageKey = 'ptr-validator-test';
+        var urlBox = document.getElementById('test-url');
+        var output = document.getElementById('test-output');
+
+        function load() {
+            try {
+                var saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                fields.forEach(function (name) {
+                    if (saved[name]) {
+                        document.getElementById(name).value = saved[name];
+                    }
+                });
+            } catch (e) {}
+        }
+
+        function save() {
+            try {
+                var data = {};
+                fields.forEach(function (name) {
+                    data[name] = document.getElementById(name).value;
+                });
+                localStorage.setItem(storageKey, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        function buildQuery() {
+            var params = new URLSearchParams();
+            ['member_id', 'unique_id', 'card_uid'].forEach(function (name) {
+                var value = document.getElementById(name).value.trim();
+                if (value !== '') {
+                    params.set(name, value);
+                }
+            });
+
+            var extra = document.getElementById('extra').value.trim().replace(/^[?&]/, '');
+            var query = params.toString();
+            if (extra !== '') {
+                query += (query ? '&' : '') + extra;
+            }
+
+            return query;
+        }
+
+        function buildUrl(script, query) {
+            return script + (query ? '?' + query : '');
+        }
+
+        function fetchJson(url) {
+            urlBox.textContent = url;
+            output.textContent = 'Loading…';
+
+            fetch(url, { headers: { 'Accept': 'application/json' } })
+                .then(function (response) {
+                    return response.text().then(function (body) {
+                        var pretty = body;
+                        try {
+                            pretty = JSON.stringify(JSON.parse(body), null, 2);
+                        } catch (e) {}
+                        output.textContent = 'HTTP ' + response.status + '\n\n' + pretty;
+                    });
+                })
+                .catch(function (error) {
+                    output.textContent = 'Request failed: ' + error;
+                });
+        }
+
+        function refreshUrl() {
+            urlBox.textContent = buildUrl('verify.php', buildQuery());
+        }
+
+        // Predefined cases. `expect.verified` is only checked when the status is 200.
+        function getTestCases() {
+            var id = document.getElementById('known_member').value.trim() || '123';
+            var uid = document.getElementById('known_card_uid').value.trim() || '04AABBCCDDEEFF';
+            var unpadded = id.replace(/^0+(?=\d)/, '');
+            var padded = /^\d+$/.test(unpadded) ? ('0000000000' + unpadded).slice(-10) : id;
+            var q = encodeURIComponent;
+
+            return [
+                { name: 'member_id, unpadded', query: 'member_id=' + q(unpadded), expect: { status: 200, verified: false } },
+                { name: 'member_id, zero-padded to 10', query: 'member_id=' + q(padded), expect: { status: 200, verified: false } },
+                { name: 'member_id, extra leading zeros', query: 'member_id=0000' + q(padded), expect: { status: 200, verified: false } },
+                { name: 'unique_id (card link param)', query: 'unique_id=' + q(padded), expect: { status: 200, verified: false } },
+                { name: 'member_id wins over unique_id', query: 'member_id=' + q(unpadded) + '&unique_id=9999999998', expect: { status: 200, verified: false } },
+                { name: 'member_id + card_uid → verified', query: 'member_id=' + q(unpadded) + '&card_uid=' + q(uid), expect: { status: 200, verified: true } },
+                { name: 'card_uid only (known UID)', query: 'card_uid=' + q(uid), expect: { status: 200, verified: true } },
+                { name: 'card_uid only (unknown UID)', query: 'card_uid=FFFFFFFFFFFFFF', expect: { status: 404 } },
+                { name: 'Unknown member number', query: 'member_id=9999999999', expect: { status: 404 } },
+                { name: 'Non-numeric member number', query: 'member_id=abc', expect: { status: 404 } },
+                { name: 'Whitespace-only member_id', query: 'member_id=%20%20', expect: { status: 404 } },
+                { name: 'No parameters', query: '', expect: { status: 400 } }
+            ];
+        }
+
+        function describeExpect(expect) {
+            var text = 'HTTP ' + expect.status;
+            if (expect.status === 200 && typeof expect.verified === 'boolean') {
+                text += expect.verified ? ', verified' : ', unverified';
+            }
+            return text;
+        }
+
+        function runCase(testCase, cell) {
+            cell.className = '';
+            cell.textContent = '…';
+
+            return fetch(buildUrl('user_data.php', testCase.query), { headers: { 'Accept': 'application/json' } })
+                .then(function (response) {
+                    return response.text().then(function (body) {
+                        var data = null;
+                        try {
+                            data = JSON.parse(body);
+                        } catch (e) {}
+
+                        var actual = 'HTTP ' + response.status;
+                        var pass = response.status === testCase.expect.status;
+                        if (response.status === 200 && data !== null) {
+                            actual += data.verified ? ', verified' : ', unverified';
+                            if (typeof testCase.expect.verified === 'boolean') {
+                                pass = pass && data.verified === testCase.expect.verified;
+                            }
+                        } else if (data === null) {
+                            actual += ', non-JSON body';
+                            pass = false;
+                        }
+
+                        cell.className = pass ? 'test-pass' : 'test-fail';
+                        cell.textContent = (pass ? 'PASS' : 'FAIL') + ' · ' + actual;
+                        return pass;
+                    });
+                })
+                .catch(function (error) {
+                    cell.className = 'test-fail';
+                    cell.textContent = 'FAIL · ' + error;
+                    return false;
+                });
+        }
+
+        function renderLinks() {
+            var body = document.getElementById('test-cases');
+            body.innerHTML = '';
+            document.getElementById('test-summary').textContent = '';
+
+            getTestCases().forEach(function (testCase) {
+                var row = document.createElement('tr');
+
+                var nameCell = document.createElement('td');
+                nameCell.textContent = testCase.name;
+                var queryCode = document.createElement('code');
+                queryCode.textContent = '?' + testCase.query;
+                nameCell.appendChild(queryCode);
+
+                var expectCell = document.createElement('td');
+                expectCell.textContent = describeExpect(testCase.expect);
+
+                var resultCell = document.createElement('td');
+                resultCell.textContent = '—';
+
+                var actionCell = document.createElement('td');
+                var run = document.createElement('a');
+                run.href = '#';
+                run.textContent = 'Run';
+                run.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    runCase(testCase, resultCell);
+                    fetchJson(buildUrl('user_data.php', testCase.query));
+                });
+
+                var page = document.createElement('a');
+                page.href = buildUrl('verify.php', testCase.query);
+                page.target = '_blank';
+                page.textContent = 'Page';
+
+                actionCell.appendChild(run);
+                actionCell.appendChild(page);
+
+                row.appendChild(nameCell);
+                row.appendChild(expectCell);
+                row.appendChild(resultCell);
+                row.appendChild(actionCell);
+                row._run = function () {
+                    return runCase(testCase, resultCell);
+                };
+                body.appendChild(row);
+            });
+        }
+
+        document.getElementById('run-all').addEventListener('click', function () {
+            var rows = Array.prototype.slice.call(document.getElementById('test-cases').rows);
+            var summary = document.getElementById('test-summary');
+            summary.className = 'test-summary';
+            summary.textContent = 'Running ' + rows.length + ' cases…';
+
+            // Sequential, to stay gentle on shared hosting.
+            var passed = 0;
+            rows.reduce(function (chain, row) {
+                return chain.then(function () {
+                    return row._run().then(function (ok) {
+                        if (ok) {
+                            passed++;
+                        }
+                    });
+                });
+            }, Promise.resolve()).then(function () {
+                summary.className = 'test-summary ' + (passed === rows.length ? 'test-pass' : 'test-fail');
+                summary.textContent = passed + ' / ' + rows.length + ' passed';
+            });
+        });
+
+        ['known_member', 'known_card_uid'].forEach(function (name) {
+            document.getElementById(name).addEventListener('input', function () {
+                save();
+                renderLinks();
+            });
+        });
+
+        document.getElementById('test-form').addEventListener('input', function () {
+            save();
+            refreshUrl();
+        });
+
+        document.querySelector('.test-actions').addEventListener('click', function (event) {
+            var action = event.target.getAttribute('data-action');
+            if (action === 'page') {
+                window.open(buildUrl('verify.php', buildQuery()), '_blank');
+            } else if (action === 'json') {
+                fetchJson(buildUrl('user_data.php', buildQuery()));
+            } else if (action === 'clear') {
+                formFields.forEach(function (name) {
+                    document.getElementById(name).value = '';
+                });
+                save();
+                refreshUrl();
+                output.textContent = 'Response from user_data.php appears here.';
+            }
+        });
+
+        load();
+        refreshUrl();
+        renderLinks();
+    })();
+    </script>
+</body>
+</html>

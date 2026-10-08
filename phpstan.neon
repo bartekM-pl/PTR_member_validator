@@ -1,0 +1,5 @@
+parameters:
+    # Start low; raise the level once the code base passes cleanly.
+    level: 2
+    paths:
+        - web

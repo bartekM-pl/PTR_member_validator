@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Weekly re-scan so new Semgrep rules and leaked-secret patterns are picked up.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-lint:
+    name: PHP syntax (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.1', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: php -l
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            php -l "$file" > /dev/null || status=1
+          done < <(find web -name '*.php' -print0)
+          exit $status
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, openssl, mbstring
+          tools: phpstan
+          coverage: none
+      - name: Use placeholder config
+        run: '[ -f web/config.php ] || cp web/config.example.php web/config.php'
+      - name: Analyse
+        run: phpstan analyse --no-progress --error-format=github
+
+  semgrep:
+    name: Semgrep (SAST)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan
+        run: >
+          semgrep scan
+          --config p/php
+          --config p/security-audit
+          --config p/secrets
+          --severity ERROR --severity WARNING
+          --error
+
+  secrets:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.18.4
+          detect --source /repo --redact --verbose
+
+  repo-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No real config committed (AUDIT H2)
+        run: |
+          if git ls-files --error-unmatch web/config.php > /dev/null 2>&1; then
+            echo "::error file=web/config.php::config.php holds secrets and must not be committed. Use web/config.example.php."
+            exit 1
+          fi
+      - name: No workbooks with member data committed (AUDIT H1)
+        run: |
+          # The test workbook is kept on purpose.
+          files=$(git ls-files -- '*.xlsm' '*.xlsx' '*.xls' '*.csv' ':!example_data/00PTR_SYSTEM_TEST.xlsm')
+          if [ -n "$files" ]; then
+            for f in $files; do
+              echo "::error file=$f::Spreadsheets may contain personal data (RODO/GDPR). Keep them out of the repository."
+            done
+            exit 1
+          fi
+      - name: External scripts carry SRI hashes (AUDIT M2)
+        run: |
+          status=0
+          while IFS= read -r match; do
+            file=${match%%:*}
+            rest=${match#*:}
+            line=${rest%%:*}
+            echo "::error file=$file,line=$line::External <script> without an integrity= attribute."
+            status=1
+          done < <(grep -rnE '<script[^>]+src="https?://' web --include='*.html' | grep -v 'integrity=' || true)
+          exit $status
