@@ -32,7 +32,7 @@ web/                         Document root for the host
 
 - PHP 7.4+ with the `mysqli`, `openssl` and `mbstring` extensions
 - MySQL / MariaDB (InnoDB, `utf8mb4`)
-- A modern browser for `import_tool.html` (it loads SheetJS from cdnjs)
+- A modern browser for `import_tool.html` (it loads SheetJS 0.20.3 from cdn.sheetjs.com, pinned with an SRI hash)
 
 ## Setup
 
